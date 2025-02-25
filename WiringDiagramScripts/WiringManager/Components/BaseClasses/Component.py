@@ -39,7 +39,17 @@ class Component(ABC):
         self.imageDimensions = self.getImageDimensions() # dimensions of the image file's contents in pixels to be used for placing the component on the canvas
         self.isPowered = isPowered # a boolean to indicate if the component is powered from something other than a GPIO Pin, like a power pin on the Pi or an external power source. This means another wire for the power source is needed for the wiring diagram.
 
-    
+    def returnPinLabel(self, pinNumber:int):
+        """
+        Returns the label of the pin based on the pin number.
+        Args:
+            pinNumber (int): The number of the pin.
+        Returns:
+            str: The label of the pin.
+        """
+        return f"{self.Label}'s {self.pinsLMRMCoordinates[pinNumber]["Usage"]} Pin {pinNumber}"
+
+
     def getImageDimensions(self):
         """
         Abstract method to get the dimensions of the component's image file.

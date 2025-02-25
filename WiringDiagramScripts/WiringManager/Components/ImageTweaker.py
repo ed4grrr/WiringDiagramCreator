@@ -1,3 +1,4 @@
+from PIL import Image
 class ImageTweaker:
     def __init__(self, imagePath:str | list[str], isOpeningOnCreation:bool = True):
         """

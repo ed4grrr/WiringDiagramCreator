@@ -50,7 +50,7 @@ class WireSegment:
     
 
 class Wire:
-    def __init__(self, label:str, segments:list[WireSegment]):
+    def __init__(self, label:str, segments:list[WireSegment] =[], color:str="black", width:int=3):
         """
         Creates a new Wire object representing a wire to be drawn.
         
@@ -60,10 +60,34 @@ class Wire:
             segments (list): A list of WireSegment objects representing the wire's segments. These segments will be drawn in order. These segments **should** be connected and ordered from one end of the wire to the other.
 
         """
+        self.color = color
+        self.width = width
         self.label = label
 
         # the reason segements should be ordered from one end of the wire to the other.
-        self.segments = {number: segment for number, segment in enumerate(segments)}
+        if segments != []:
+            self.segments = {number: segment for number, segment in enumerate(segments)}
+        else:
+            self.segments = {}
+
+
+    def addSegment(self, endPoint1:Coordinates, endPoint2:Coordinates, color:str="", width:int=-1):
+        """
+        Adds a wire segment to the wire.
+        
+        Args:
+        
+            segment (WireSegment): The wire segment to be added to the wire.
+        """
+        if color == "":
+            color = self.color
+        if width == -1:
+            width = self.width
+       
+        # the plus one is to make the segment number start at 1 instead of 0
+        # as an empty dict would have a length of 0. Works in all other 
+        # cases too
+        self.segments[len(self.segments)+1] = WireSegment(f"{self.label} Segment {len(self.segments)+1}", endPoint1, endPoint2, color, width)
 
     def returnWireDict(self):
         """
