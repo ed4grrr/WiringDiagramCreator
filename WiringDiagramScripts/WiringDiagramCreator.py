@@ -1,6 +1,5 @@
 from PIL import Image, ImageDraw, ImageFont
-from WiringDiagramScripts.ImageTweaker import ImageTweaker
-from WiringDiagramScripts.Component import Component
+
 
 
 class WiringDiagramCreator:
@@ -11,6 +10,7 @@ class WiringDiagramCreator:
         self.circuitImage = None
         self.circuitImageOutputPath = ""
         self.circuitImageSize = None
+        self.wiringImage = None
 
 
     def createWiringDiagram(self):
@@ -38,9 +38,15 @@ class WiringDiagramCreator:
         # determine the size of the image based on the number of components 
         # and the size of the components' images 
 
-        
+        xResolution = 10000
+        yResolution = 10000
 
         # create the blank image using the dimensions determined above
+        
+
+        self.wiringImage = Image.new("RGB", (xResolution, yResolution), "white")
+
+        
 
         # add title to the top of the image
 
