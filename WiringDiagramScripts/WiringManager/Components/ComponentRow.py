@@ -1,4 +1,4 @@
-import Components.BaseClasses.Component as Component
+import WiringDiagramScripts.WiringManager.Components.Component as Component
 import Components.Coordinates as Coordinates
 
 

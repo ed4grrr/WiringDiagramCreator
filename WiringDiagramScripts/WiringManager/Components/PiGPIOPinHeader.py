@@ -1,14 +1,16 @@
-import WiringDiagramScripts.WiringManager.Components.BaseClasses.Component as Component
-import Coordinates
-
+from Component import Component
+from Coordinates import Coordinates
+import os
 
 class PiGPIOPinHeader(Component):
     def __init__(self, name):
-        self.imagePath = "./Images/PiGPIOPinHeader.png"
+        dirname = os.path.dirname(__file__)
+        filename = os.path.join(dirname, "Images\\PiGPIOImage.png")
+        self.imagePath = filename
         self.Label = name + " Pi GPIO Pin Header"
         self.electricalValuesDict = {"Voltage Output": [3.3, 5]}
 
-        self.pinsLMRMCoordinates = {
+        self.pinLMRMCoordinates = {
             1: {
                 "Usage": "3.3V Power",
                 "LM": Coordinates("LM Pin 1", 30, 15),
@@ -210,3 +212,4 @@ class PiGPIOPinHeader(Component):
                 "RM": Coordinates("RM Pin 40", 50, 1400),
             },
         }
+        super().__init__(self.Label, self.imagePath, self.electricalValuesDict, self.pinLMRMCoordinates, True)

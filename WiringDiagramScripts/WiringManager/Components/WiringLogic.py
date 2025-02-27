@@ -1,4 +1,4 @@
-from WiringDiagramScripts.WiringManager.Components.BaseClasses.Component import (
+from WiringDiagramScripts.WiringManager.Components.Component import (
     Component,
 )
 from Components.Coordinates import Coordinates
@@ -183,8 +183,8 @@ class WiringLogic:
         return (
             self._calculateEndPoint(
                 f"GPIO Pin {physicalPinNumber}",
-                self.controllerComponent.pinsLMRMCoordinates[physicalPinNumber]["LM"],
-                self.controllerComponent.pinsLMRMCoordinates[physicalPinNumber]["RM"],
+                self.controllerComponent.pinLMRMCoordinates[physicalPinNumber]["LM"],
+                self.controllerComponent.pinLMRMCoordinates[physicalPinNumber]["RM"],
             ),
             physicalPinNumber % 2 == 0,
         )

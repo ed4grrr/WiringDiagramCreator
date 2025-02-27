@@ -1,7 +1,9 @@
 from abc import ABC, abstractmethod
 import json
 from PIL import Image, UnidentifiedImageError
-from Components.Coordinates import Coordinates
+from Coordinates import Coordinates
+from math import radians, cos, sin
+
 class Component(ABC):
     """
     Abstract base class to represent a component.
@@ -35,9 +37,12 @@ class Component(ABC):
         self.imagePath = imagePath  # path to image file of the component
         self.electricalValuesDict = electricalValuesDict # a dictionary of electrical measurements relevant to the component and their rated values
         
-        self.pinsLMRMCoordinates = pinsLMRMCoordinates # a dictionary of key int (representing physical pin number) and value tuple of (int, int) (representing the center of the pin). The tuple can be placed anywhere vertically on the pin but MUST be centered horizontally. The tuple represents the highest point the wire can be connected to the pin. This can be adjusted for aesthetic purposes.
+        self.pinLMRMCoordinates = pinsLMRMCoordinates # a dictionary of key int (representing physical pin number) and value tuple of (int, int) (representing the center of the pin). The tuple can be placed anywhere vertically on the pin but MUST be centered horizontally. The tuple represents the highest point the wire can be connected to the pin. This can be adjusted for aesthetic purposes.
         self.imageDimensions = self.getImageDimensions() # dimensions of the image file's contents in pixels to be used for placing the component on the canvas
         self.isPowered = isPowered # a boolean to indicate if the component is powered from something other than a GPIO Pin, like a power pin on the Pi or an external power source. This means another wire for the power source is needed for the wiring diagram.
+
+    def __str__(self):
+        return f"Component: {self.Label}\nImage Path: {self.imagePath}\nElectrical Values: {self.electricalValuesDict}\nPin Coordinates: {self.pinLMRMCoordinates}\nImage Dimensions: {self.imageDimensions}\nIs Powered: {self.isPowered}"
 
     def returnPinLabel(self, pinNumber:int):
         """
@@ -47,8 +52,71 @@ class Component(ABC):
         Returns:
             str: The label of the pin.
         """
-        return f"{self.Label}'s {self.pinsLMRMCoordinates[pinNumber]["Usage"]} Pin {pinNumber}"
+        return f"{self.Label}'s {self.pinLMRMCoordinates[pinNumber]["Usage"]} Pin {pinNumber}"
 
+
+    def adjustCoordinatesAfterPlacement(self, topLeftCoordinates: tuple[int, int]):
+        """
+        given the top left pixel of where the component will be placed on the canvas, adjust the coordinates of the pins to match the placement of the component on the canvas
+
+        This will require adjusting all the coordinates of the pins to match the new placement of the component on the canvas.
+        
+        Args:
+        
+            xPlacement (int): The x-coordinate of the top left corner of the component on the canvas.
+            yPlacement (int): The y-coordinate of the top left corner of the component on the canvas.
+
+
+        """
+
+        xPlacement, yPlacement = topLeftCoordinates
+
+        for values in self.pinLMRMCoordinates.values():
+            for value in values.values():
+                if isinstance(value, Coordinates):
+                    value.x += xPlacement
+                    value.y += yPlacement
+
+    def printCoordinates(self):
+        for values in self.pinLMRMCoordinates.values():
+            for value in values.values():
+                if isinstance(value, Coordinates):
+                    print(f"({value.x}, {value.y})")
+    
+    def adjustCoordinatesAfterScaling(self, xDestinationResolution: int, yDestinationResolution: int):
+        """
+        Adjusts the coordinates of the pins of the component after the image has been scaled to a new resolution.
+        
+        Args:
+        
+            xDestinationResolution (int): The new x-resolution.
+            yDestinationResolution (int): The new y-resolution.
+
+
+        """
+        for values in self.pinLMRMCoordinates.values():
+            for value in values.values():
+                if isinstance(value, Coordinates):
+                    xResolution, yResolution = self.getImageDimensions()
+
+                    # use old and new resolution to create a ratio to scale the coordinates
+                    value.x = int(value.x * xDestinationResolution / xResolution)
+                    value.y = int(value.y * yDestinationResolution / yResolution)
+                    # I HAVE ABSOLUTELY NO IDEA IF THIS WILL WORK. I'M JUST GUESSING.
+
+    def adjustCoordinatesAfterRotation(self, rotation: int):
+
+        def rotate_point(x, y, angle):
+            rad = radians(angle)
+            new_x = x * cos(rad) - y * sin(rad)
+            new_y = x * sin(rad) + y * cos(rad)
+            return new_x, new_y
+
+
+        for values in self.pinLMRMCoordinates.values():
+            for info in values.values():
+                if isinstance(info, Coordinates):
+                    info.x, info.y = rotate_point(info.x, info.y, rotation)
 
     def getImageDimensions(self):
         """
@@ -116,18 +184,9 @@ class LED(Component):
             "Ground": ((10, 10), (20, 20)),
             "Anode": ((30, 30), (40, 40))
         }
+    
+
 
 # Example usage
 if __name__ == "__main__":
-    led = LED(
-        componentLabel="LED",
-        imagePath="led.png",
-        electricalValuesDict={"Voltage": {"min": 1.8, "max": 2.2}},
-        pinsUsageDictionary={
-            1: {"Name": "Ground", "endpointCoords": (10, 10)},
-            2: {"Name": "Anode", "endpointCoords": (30, 30)}
-        }
-    )
-    print(led.getComponentType())
-    print(led.getImageDimensions())
-    print(led.getPinRectangles())
+    pass

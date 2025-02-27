@@ -1,4 +1,4 @@
-import WiringDiagramScripts.WiringManager.Components.BaseClasses.Component as Component
+import WiringDiagramScripts.WiringManager.Components.Component as Component
 import Coordinates
 from Utilities.PinEnum import *
 
