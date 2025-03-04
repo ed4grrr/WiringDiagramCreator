@@ -3,13 +3,15 @@ import json
 from PIL import Image, UnidentifiedImageError
 from Coordinates import Coordinates
 from math import radians, cos, sin
+from Utilities.DirectionEnum import *
 
+from Wire import WireLines
 class Component(ABC):
     """
     Abstract base class to represent a component.
     """
 
-    def __init__(self, componentLabel: str, imagePath: str, electricalValuesDict: dict[str, dict[str, any]], pinsLMRMCoordinates: dict[int, dict[str,Coordinates]], isPowered: bool = False):
+    def __init__(self, componentLabel: str, imagePath: str, electricalValuesDict: dict[str, dict[str, any]], pinLMRMCoordinates: dict[int, dict[str,Coordinates]], isPowered: bool = False, controllerKey: int = None):
         """
         Initializes a new Component object
 
@@ -37,12 +39,23 @@ class Component(ABC):
         self.imagePath = imagePath  # path to image file of the component
         self.electricalValuesDict = electricalValuesDict # a dictionary of electrical measurements relevant to the component and their rated values
         
-        self.pinLMRMCoordinates = pinsLMRMCoordinates # a dictionary of key int (representing physical pin number) and value tuple of (int, int) (representing the center of the pin). The tuple can be placed anywhere vertically on the pin but MUST be centered horizontally. The tuple represents the highest point the wire can be connected to the pin. This can be adjusted for aesthetic purposes.
+        self.pinLMRMCoordinates = pinLMRMCoordinates # a dictionary of key int (representing physical pin number) and value tuple of (int, int) (representing the center of the pin). The tuple can be placed anywhere vertically on the pin but MUST be centered horizontally. The tuple represents the highest point the wire can be connected to the pin. This can be adjusted for aesthetic purposes.
         self.imageDimensions = self.getImageDimensions() # dimensions of the image file's contents in pixels to be used for placing the component on the canvas
         self.isPowered = isPowered # a boolean to indicate if the component is powered from something other than a GPIO Pin, like a power pin on the Pi or an external power source. This means another wire for the power source is needed for the wiring diagram.
+        self.controllerKey = controllerKey # a key to identify the controller that the component is connected to. This is used to identify the controller that the component is connected to in the wiring diagram.
+
+        self.wires = {} # a dictionary of wires that are connected to the component. The key is an int and the value is the wire object.
 
     def __str__(self):
         return f"Component: {self.Label}\nImage Path: {self.imagePath}\nElectrical Values: {self.electricalValuesDict}\nPin Coordinates: {self.pinLMRMCoordinates}\nImage Dimensions: {self.imageDimensions}\nIs Powered: {self.isPowered}"
+    
+    def addWire(self, wire: WireLines, pinDestinationNumber: int):
+        """
+        Adds a wire to the component.
+        Args:
+            wire (Wire): The wire to add to the component.
+        """
+        self.wires[pinDestinationNumber] = wire
 
     def returnPinLabel(self, pinNumber:int):
         """
@@ -172,19 +185,131 @@ class Component(ABC):
         except Exception as e:
             raise ValueError(f"An error occurred while saving the component. Error: {e}")
 
-# Example of a concrete class inheriting from Component
-class LED(Component):
-    def getImageDimensions(self):
-        # Implement logic to get image dimensions
-        return (800, 1200)  # Example dimensions
+    def adjustCoordinates(self, original_size, new_size, rotation_angle, new_position):
+        """
+        Adjusts the coordinates of the pins due to resizing, rotation, and new position.
 
-    def getPinRectangles(self):
-        # Implement logic to get pin rectangles
-        return {
-            "Ground": ((10, 10), (20, 20)),
-            "Anode": ((30, 30), (40, 40))
-        }
-    
+        :param original_size: The original size of the image (width, height).
+        :param new_size: The new size of the image (width, height).
+        :param rotation_angle: The rotation angle in degrees.
+        :param new_position: The new position of the top-left corner of the image (x, y).
+        """
+
+
+        # Adjust for rotation
+        # account for only 90, 180, 270 degrees
+        
+        if rotation_angle == 90:
+            for values in self.pinLMRMCoordinates.values():
+                for value in values.values():
+                    if isinstance(value, Coordinates):
+                        value.x, value.y = value.y, value.x
+        elif rotation_angle == 180:
+            for values in self.pinLMRMCoordinates.values():
+                for value in values.values():
+                    if isinstance(value, Coordinates):
+                        value.x, value.y = -value.x, -value.y
+        elif rotation_angle == 270:
+            for values in self.pinLMRMCoordinates.values():
+                for value in values.values():
+                    if isinstance(value, Coordinates):
+                        value.x, value.y = -value.y, value.x
+        elif rotation_angle == 0:
+            pass
+        else:
+            raise ValueError("Invalid rotation angle. Only 0, 90, 180, and 270 degrees are supported.")
+        self._determinePinLocationAfterRotation(rotation_angle)
+
+                
+        # Adjust for resizing
+        scale_x = new_size[0] / original_size[0]
+        scale_y = new_size[1] / original_size[1]
+        #print(f"scale_x: {scale_x}, scale_y: {scale_y}")
+        for values in self.pinLMRMCoordinates.values():
+            for value in values.values():
+                if isinstance(value, Coordinates):
+                    value.x *= scale_x
+                    #print(f"new x: {value.x}")
+                    value.y *= scale_y
+                    #print(f"new y: {value.y}")
+        
+        #print(f"Adjusting for new position")
+        # Adjust for new position
+        for values in self.pinLMRMCoordinates.values():
+            for value in values.values():
+                if isinstance(value, Coordinates):
+                    value.x += new_position[0]
+                   # print(f"new x: {value.x}")
+                    value.y += new_position[1]
+                  #  print(f"new y: {value.y}")
+
+
+    def _determinePinLocationAfterRotation(self, rotationAngle):
+        """
+        changes the Direction enum that represent what side fo the component that pin is on (relative to the component's original image) based on the rotation of the component's original image.
+        Args:
+            rotationAngle (int): The angle of rotation in degrees.
+        """
+
+        for key1,values in self.pinLMRMCoordinates.items():
+               # print(f"FIRST SEARCH ME {key1}\n{values}")
+                for key2,value in values.items():
+                    
+                    if isinstance(value, DirectionEnum):
+                       # print(f"SECOND SEARCH ME {key2}\n{value.value}\nrotation {rotationAngle}")
+                        self.pinLMRMCoordinates[key1][key2] = self._determineNewDirection(value, rotationAngle)
+                       # print(f"DID I CHANGE? {key1} {key2}\n{self.pinLMRMCoordinates[key1][key2].value}")
+
+
+    @staticmethod                    
+    def _determinePinCenter(pinLM, pinRM):
+        """
+        Determines the center of the pin based on the leftmost and rightmost points of the pin.
+        Args:
+            pinLM (Coordinates): The leftmost point of the pin.
+        """
+        return Coordinates("PinCenter",(pinLM.x + pinRM.x) / 2, (pinLM.y + pinRM.y) / 2)
+
+    def _determineNewDirection(self, currentDirection, rotationAngle):
+        """
+        changes the Direction enum that represent what side fo the component that pin is on (relative to the component's original image) based on the rotation of the component's original image.
+        Args:
+            currentDirection (DirectionEnum): The current direction of the pin.
+            rotationAngle (int): The angle of rotation in degrees.
+        Returns:
+            DirectionEnum: The new direction of the pin.
+        """
+        if rotationAngle == 270:
+            if currentDirection == UP:
+                return RIGHT
+            elif currentDirection == RIGHT:
+                return DOWN
+            elif currentDirection == DOWN:
+                return LEFT
+            elif currentDirection == LEFT:
+                return UP
+        elif rotationAngle == 180:
+            if currentDirection == UP:
+                return DOWN
+            elif currentDirection == RIGHT:
+                return LEFT
+            elif currentDirection == DOWN:
+                return UP
+            elif currentDirection == LEFT:
+                return RIGHT
+        elif rotationAngle == 90:
+            if currentDirection == UP:
+                return LEFT
+            elif currentDirection == RIGHT:
+                return UP
+            elif currentDirection == DOWN:
+                return RIGHT
+            elif currentDirection == LEFT:
+                return DOWN
+        elif rotationAngle == 0:
+            return currentDirection
+        else:
+            raise ValueError("Invalid rotation angle. Only 0, 90, 180, and 270 degrees are supported.")
 
 
 # Example usage

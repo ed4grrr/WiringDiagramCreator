@@ -44,6 +44,16 @@ class Coordinates:
         """
         return {"x": self.x, "y": self.y}
     
+    def returnCoordinatesTuple(self):
+        """
+        Returns the coordinates object's attributes within a tuple.
+        
+        Returns:
+        
+            tuple: The coordinates object's attributes.
+        """
+        return (self.x, self.y)
+    
     def returnYCoordinate(self):
         """
         Returns the y-coordinate of the Coordinates object.

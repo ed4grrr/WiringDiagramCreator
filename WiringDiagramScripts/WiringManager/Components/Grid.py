@@ -1,6 +1,6 @@
 
-from Components.Coordinates import Coordinates
-
+from Coordinates import Coordinates
+from math import sqrt, pow
 
 class CellAlreadySetError(Exception):
     """ Exception raised when a cell is already set. """
@@ -32,32 +32,27 @@ class Grid:
             true if the x distance is longer than the y distance, false otherwise."""
         return abs(end.x - start.x) > abs(end.y - start.y)
     
-    def setPixelLine(self, start:Coordinates, end:Coordinates):
+    
+    def setPixelLine(self, start:Coordinates, end:Coordinates, label:str):
         """
         Sets a line of pixels on the grid.
         Args:
             start (Coordinates): The starting coordinates of the line.
             end (Coordinates): The ending coordinates of the line.
         """
-        x0=start.x
-        y0=start.y
-        x1=end.x
-        y1=end.y
-        dx = abs(x1 - x0)
-        dy = abs(y1 - y0)
-        sx = -1 if x0 > x1 else 1
-        sy = -1 if y0 > y1 else 1
-        err = dx - dy
-        while x0 != x1 or y0 != y1:
-            self.setPixel(Coordinates(x0, y0))
-            e2 = 2 * err
-            if e2 > -dy:
-                err -= dy
-                x0 += sx
-            if e2 < dx:
-                err += dx
-                y0 += sy
-        self.setPixel(Coordinates(x1, y1))
+        # create every point between start and end
+        xSlope = int((end.y - start.y))
+        ySlope =int((end.x - start.x))
+
+        distanceBetweenPoints = int(sqrt(pow(end.x - start.x, 2) + pow(end.y - start.y, 2)))
+
+        points = [start]
+        for i in range(1, distanceBetweenPoints):
+            points.append(Coordinates("Point", start.x + int(i * ySlope / distanceBetweenPoints), start.y + int(i * xSlope / distanceBetweenPoints))
+            )
+        for point in points:
+            self.setPixel(point)
+
 
     def setPixel(self, coord:Coordinates):
         """
@@ -68,12 +63,13 @@ class Grid:
         """
         x=coord.x
         y=coord.y
-        if x < 0 or x >= self.width or y < 0 or y >= self.height:
+        if x < 0 or x > self.width or y < 0 or y > self.height:
             raise ValueError(f"The pixel ({x}, {y}) is out of the grid bounds.")
         if x not in self.grid:
             self.grid[x] = {}
         if y in self.grid[x]:
-            raise CellAlreadySetError(f"The pixel ({x}, {y}) is already set.")
+            pass
+            #raise CellAlreadySetError(f"The pixel ({x}, {y}) is already set.")
         self.grid[x][y] = True
    
 

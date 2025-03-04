@@ -1,7 +1,115 @@
-import PIL
+from __future__ import annotations
+
 import Coordinates
+from Utilities.DirectionEnum import *
+
+class WireSegmentLines:
+    def __init__(self, label:str, wireStartPoint:Coordinates, wireEndPoint:Coordinates, color:str="black", width:int=3):
+        """
+        Creates a new Wire object representing a wire to be drawn.
+        
+        Args:
+        
+
+        """
+        self.label = label
+        self.wireStartPoint = wireStartPoint
+        self.wireEndPoint = wireEndPoint
+        self.color = color.lower()
+        self.width = width
+
+    def __str__(self):
+        return f"WireSegmentLines: {self.label} from {self.wireStartPoint} with color {self.color} and width {self.width}"
+    def __repr__(self):
+        return f"WireSegmentLines({self.label}, {self.wireStartPoint}, {self.color}, {self.width})"
+    def intersects(self, other:WireSegmentLines):
+        """
+        Checks if the wire segment intersects with another wire segment.
+        
+        Args:
+        
+            other (WireSegment): The wire segment to check if it intersects with.
+        
+        Returns:
+        
+            bool: True if the wire segment intersects with the other wire segment, False otherwise.
+        """
+        # check if the wire segment intersects with the other wire segment
+        return self.wireStartPoint.x < other.wireEndPoint.x and self.wireEndPoint.x > other.wireStartPoint.x and self.wireStartPoint.y < other.wireEndPoint.y and self.wireEndPoint.y > other.wireStartPoint.y
+    
+    
+class WireLines:
+    def __init__(self, label:str, segments:list[WireSegmentLines] =[], color:str="black", width:int=3):
+        """
+        Creates a new Wire object representing a wire to be drawn.
+        
+        Args:
+        
+            label (str): The label of the wire.
+            segments (list): A list of WireSegment objects representing the wire's segments. These segments will be drawn in order. These
+            segments **should** be connected and ordered from one end of the wire to the other.
+
+        
+        """
+
+        self.color = color
+        self.width = width
+        self.label = label
+
+        # the reason segements should be ordered from one end of the wire to the other.
+        if segments != []:
+            self.segments = {number: segment for number, segment in enumerate(segments)}
+        else:
+            self.segments = {}
+
+    def checkIfWireIntersects(self, wire:WireLines):
+        """
+        Checks if the wire intersects with another wire.
+        
+        Args:
+        
+            wire (Wire): The wire to check if it intersects with.
+        
+        Returns:
+        
+            bool: True if the wire intersects with the other wire, False otherwise.
+        """
+        for segment in self.segments.values():
+            for otherSegment in wire.segments.values():
+                if segment.intersects(otherSegment):
+                    return True
+        return False
+
+
+    def addSegment(self, wireStartPoint:Coordinates, wireEndPoint:Coordinates, color:str="", width:int=-1):
+        """
+        Adds a wire segment to the wire.
+        
+        Args:
+        
+            segment (WireSegment): The wire segment to be added to the wire.
+        """
+        if color == "":
+            color = "black"
+        if width == -1:
+            width = self.width
+       
+        # the plus one is to make the segment number start at 1 instead of 0
+        # as an empty dict would have a length of 0. Works in all other 
+        # cases too
+        self.segments[len(self.segments)+1] = WireSegmentLines(f"{self.label} Segment {len(self.segments)+1}", wireStartPoint, wireEndPoint, color=color, width =width)
+
+    def __str__(self):
+        segments = ""
+        for key,segment in self.segments.items():
+            segments += f"Wire Segment {key}: {segment}\n"
+        return f"Wire: {self.label} with {len(self.segments)} segments.\n The segments are: {segments}"
+        
+
+
+
 class WireSegment:
-    def __init__(self, label:str, endPoint1: Coordinates, endPoint2: Coordinates, color:str="black", width:int=3):
+    def __init__(self, label:str, LMCoord: Coordinates, RMCoord: Coordinates, pinLocation:DirectionEnum, color:str="black", width:int=3):
         """
         Creates a new Wire object representing a wire to be drawn.
         
@@ -14,10 +122,12 @@ class WireSegment:
             width (int): The width of the wire.
         """
         self.label = label
-        self.endPoint1 = endPoint1
-        self.endPoint2 = endPoint2
+        self.LMCoord = LMCoord
+        self.RMCoord = RMCoord
         self.color = color.lower()
         self.width = width
+        self.pinLocation = pinLocation
+        self.direction = pinLocation
 
     def returnWireSegmentDict(self):
         """
@@ -27,7 +137,7 @@ class WireSegment:
         
             dict: The wire object's attributes.
         """
-        return {"label": self.label, "endPoint1": self.endPoint1, "endPoint2": self.endPoint2, "color": self.color, "width": self.width}
+        return {"label": self.label, "LM": self.LMCoord, "RM": self.RMCoord, "color": self.color, "width": self.width}
     
     def returnWireSegmentString(self):
         """
@@ -37,14 +147,14 @@ class WireSegment:
         
             str: The wire object's attributes.
         """
-        return f"WireSegment: {self.label} from {self.endPoint1} to {self.endPoint2} with color {self.color} and width {self.width}"
+        return f"WireSegment: {self.label} from {self.LMCoord} to {self.RMCoord} with color {self.color} and width {self.width}"
     def __str__(self):
         return self.returnWireSegmentString()
     def __repr__(self):
-        return f"WireSegment({self.label}, {self.endPoint1}, {self.endPoint2}, {self.color}, {self.width})"
-    def __eq__(self, other):
-        return self.label == other.label and self.endPoint1 == other.endPoint1 and self.endPoint2 == other.endPoint2 and self.color == other.color and self.width == other.width
-    def __ne__(self, other):
+        return f"WireSegment({self.label}, {self.LMCoord}, {self.RMCoord}, {self.color}, {self.width})"
+    def __eq__(self, other:WireSegment):
+        return self.label == other.label and self.LMCoord == other.LMCoord and self.RMCoord == other.RMCoord and self.color == other.color and self.width == other.width
+    def __ne__(self, other: WireSegment):
         return not self == other
     # TODO add more geometric methods that can be performed on line segments
     
@@ -71,7 +181,7 @@ class Wire:
             self.segments = {}
 
 
-    def addSegment(self, endPoint1:Coordinates, endPoint2:Coordinates, color:str="", width:int=-1):
+    def addSegment(self, LM:Coordinates, RM:Coordinates, pinLocation:DirectionEnum, color:str="", width:int=-1):
         """
         Adds a wire segment to the wire.
         
@@ -80,14 +190,14 @@ class Wire:
             segment (WireSegment): The wire segment to be added to the wire.
         """
         if color == "":
-            color = self.color
+            color = "black"
         if width == -1:
             width = self.width
        
         # the plus one is to make the segment number start at 1 instead of 0
         # as an empty dict would have a length of 0. Works in all other 
         # cases too
-        self.segments[len(self.segments)+1] = WireSegment(f"{self.label} Segment {len(self.segments)+1}", endPoint1, endPoint2, color, width)
+        self.segments[len(self.segments)+1] = WireSegment(f"{self.label} Segment {len(self.segments)+1}", LM, RM, pinLocation, color=color, width =width)
 
     def returnWireDict(self):
         """
@@ -136,9 +246,11 @@ class Wire:
     def __contains__(self, item):
         return item in self.segments
     
-    def __eq__(self, other):
+    def __eq__(self, other:Wire):
         return self.label == other.label and self.segments == other.segments
     
+    def __ne__(self, other:Wire):
+        return not self == other
 if __name__ == "__main__":
     wireSegment1 = WireSegment("Segment 1", Coordinates.Coordinates("A", 0, 0), Coordinates.Coordinates("B", 0, 10))
     wireSegment2 = WireSegment("Segment 2", Coordinates.Coordinates("B", 0, 10), Coordinates.Coordinates("C", 10, 10))
